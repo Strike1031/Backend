@@ -13,9 +13,7 @@ require("./common/db");
 
 var Binance = require("binance-api-node").default;
 var Transaction = require("./models/transactions");
-var FutureTransaction = require("./models/futuretransactions");
 
-var apiRoutes = require("./routes/index");
 
 var app = express();
 
@@ -49,7 +47,6 @@ require('./common/socketapi')(app.io);
  * Server Routing configuration
  */
 
-app.use("/", apiRoutes);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -75,93 +72,48 @@ const client = Binance({
   getTime: 60,
 });
 
-client.futuresExchangeInfo().then((res) => {
-  console.log(res);
-})
 
-// let previousData = [];
-// client.ws.allTickers(async (tickers) => {
-//     tickers.map(async (ticker) => {
-//       let tickerEvent = ticker.eventTime.toString().substring(0, 7);
-//       if(!previousData[ticker.symbol]){
-//         previousData[ticker.symbol] = { lasttime: tickerEvent };
-//         tickerEvent = '^' + tickerEvent;
-//         const aggregateVal = [
-//           {
-//             '$match': {
-//               'symbol': ticker.symbol
-//             }
-//           }, {
-//             '$addFields': {
-//               'convertedTime': {
-//                 '$toString': {
-//                   '$toLong': '$eventTime'
-//                 },
-//               },        
-//             }
-//           }, {
-//             '$match': {
-//               'convertedTime': {
-//                 '$regex': tickerEvent
-//               }
-//             }
-//           },
-//         ];
-//         const existTransaction = await Transaction.aggregate(aggregateVal);
-//         if(existTransaction.length == 0){
-//           await Transaction.create(ticker);
-//         }
-//       }
-//       else {
-//         if(previousData[ticker.symbol].lasttime != tickerEvent){
-//           previousData[ticker.symbol].lasttime = tickerEvent;
-//           await Transaction.create(ticker);
-//         }
-//       }
-//     });
-// });
-
-// let previousFutureData = [];
-// client.ws.futuresAllTickers(async (tickers) => {
-//     tickers.map(async (ticker) => {
-//       let tickerEvent = ticker.eventTime.toString().substring(0, 7);
-//       if(!previousFutureData[ticker.symbol]){
-//         previousFutureData[ticker.symbol] = { lasttime: tickerEvent };
-//         tickerEvent = '^' + tickerEvent;
-//         const aggregateVal = [
-//           {
-//             '$match': {
-//               'symbol': ticker.symbol
-//             }
-//           }, {
-//             '$addFields': {
-//               'convertedTime': {
-//                 '$toString': {
-//                   '$toLong': '$eventTime'
-//                 },
-//               },        
-//             }
-//           }, {
-//             '$match': {
-//               'convertedTime': {
-//                 '$regex': tickerEvent
-//               }
-//             }
-//           },
-//         ];
-//         const existTransaction = await FutureTransaction.aggregate(aggregateVal);
-//         if(existTransaction.length == 0){
-//           await FutureTransaction.create(ticker);
-//         }
-//       }
-//       else {
-//         if(previousFutureData[ticker.symbol].lasttime != tickerEvent){
-//           previousFutureData[ticker.symbol].lasttime = tickerEvent;
-//           await FutureTransaction.create(ticker);
-//         }
-//       }
-//     });
-// });
+let previousData = [];
+client.ws.allTickers(async (tickers) => {
+    tickers.map(async (ticker) => {
+      let tickerEvent = ticker.eventTime.toString().substring(0, 7);
+      if(!previousData[ticker.symbol]){
+        previousData[ticker.symbol] = { lasttime: tickerEvent };
+        tickerEvent = '^' + tickerEvent;
+        const aggregateVal = [
+          {
+            '$match': {
+              'symbol': ticker.symbol
+            }
+          }, {
+            '$addFields': {
+              'convertedTime': {
+                '$toString': {
+                  '$toLong': '$eventTime'
+                },
+              },        
+            }
+          }, {
+            '$match': {
+              'convertedTime': {
+                '$regex': tickerEvent
+              }
+            }
+          },
+        ];
+        const existTransaction = await Transaction.aggregate(aggregateVal);
+        if(existTransaction.length == 0){
+          await Transaction.create(ticker);
+        }
+      }
+      else {
+        if(previousData[ticker.symbol].lasttime != tickerEvent){
+          previousData[ticker.symbol].lasttime = tickerEvent;
+          await Transaction.create(ticker);
+        }
+      }
+    });
+});
 
 
 module.exports = app;
